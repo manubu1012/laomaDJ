@@ -2,7 +2,11 @@ package main
 
 import (
 	"flag"
+	"github.com/google/uuid"
+
+	"math/rand"
 	"os"
+	"time"
 
 	"verify-code/internal/conf"
 
@@ -13,20 +17,21 @@ import (
 	"github.com/go-kratos/kratos/v2/middleware/tracing"
 	"github.com/go-kratos/kratos/v2/transport/grpc"
 	"github.com/go-kratos/kratos/v2/transport/http"
-
+	consul "github.com/go-kratos/kratos/contrib/registry/consul/v2"
 	_ "go.uber.org/automaxprocs"
+	"github.com/hashicorp/consul/api"
 )
 
 // go build -ldflags "-X main.Version=x.y.z"
 var (
 	// Name is the name of the compiled software.
-	Name string
+	Name  = "VerifyCode"
 	// Version is the version of the compiled software.
-	Version string
+	Version  = "1.0.0"
 	// flagconf is the config flag.
 	flagconf string
 
-	id, _ = os.Hostname()
+	id = Name + uuid.NewString()
 )
 
 func init() {
@@ -34,7 +39,18 @@ func init() {
 }
 
 func newApp(logger log.Logger, gs *grpc.Server, hs *http.Server) *kratos.App {
+
+	consulConfig:=api.DefaultConfig()
+	consulConfig.Address="localhost:8500"
+	client, err := api.NewClient(consulConfig)
+	if err != nil {
+		panic(err)
+	}
+	// new reg with consul client
+	reg := consul.New(client)
+
 	return kratos.New(
+
 		kratos.ID(id),
 		kratos.Name(Name),
 		kratos.Version(Version),
@@ -44,6 +60,7 @@ func newApp(logger log.Logger, gs *grpc.Server, hs *http.Server) *kratos.App {
 			gs,
 			hs,
 		),
+		kratos.Registrar(reg),
 	)
 }
 
@@ -80,6 +97,8 @@ func main() {
 	}
 	defer cleanup()
 
+	//set random  seed
+	rand.Seed(time.Now().UnixNano())
 	// start and wait for stop signal
 	if err := app.Run(); err != nil {
 		panic(err)
