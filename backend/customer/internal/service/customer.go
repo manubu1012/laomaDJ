@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/consul/api"
 	"log"
 
+
 	"github.com/go-kratos/kratos/v2/transport/grpc"
 
 	"regexp"
@@ -24,15 +25,36 @@ import (
 type CustomerService struct {
 	pb.UnimplementedCustomerServer
 	Cd *data.CustomerData
+	cbz *biz.CustomerBiz
 }
 
 
-func NewCustomerService(cd  *data.CustomerData) *CustomerService {
+func NewCustomerService(cd  *data.CustomerData,cbz *biz.CustomerBiz) *CustomerService {
 	return &CustomerService{
 		Cd: cd,
+		cbz: cbz,
 	}
 }
 
+func (s *CustomerService) EstimatePrice(ctx context.Context, req *pb.EstimatePriceReq) (*pb.EstimatePriceResp, error) {
+	price, err := s.cbz.GetEstimatePrice(req.Origin, req.Destination)
+	if err!=nil {
+		return &pb.EstimatePriceResp{
+			Code:        1,
+			Message:     "fail",
+			Origin:      req.Origin,
+			Destination: req.Destination,
+			Price:       0,
+		},nil
+	}
+	return &pb.EstimatePriceResp{
+		Code:        0,
+		Message:     "success",
+		Origin:      req.Origin,
+		Destination: req.Destination,
+		Price: price,
+	}, nil
+}
 func (s *CustomerService) GetVerifyCode(ctx context.Context, req *pb.GetVerifyCodeReq) (*pb.GetVerifyCodeResp, error) {
 	pattern := `^(13\d|14[01456879]|15[0-35-9]|16[2567]|17[0-8]|18\d|19[0-35-9])\d{8}$`
 	regexpPattern:=regexp.MustCompile(pattern)

@@ -14,8 +14,10 @@ services:
       MYSQL_DATABASE: laomadj_customer
     ports:
       - "3306:3306"
+    command: --init-file /docker-entrypoint-initdb.d/init.sql
     volumes:
-      - ./data/mysql:/var/lib/data
+      - ./volumes/mysql/data:/var/lib/mysql
+      - ./volumes/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
   consul:
     container_name: laomaDJConsul
     image: consul

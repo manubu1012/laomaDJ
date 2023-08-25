@@ -53,8 +53,6 @@ func (cd *CustomerData)GetCustomerByTelephone(telephone string) (*biz.Customer,e
 
 }
 
-
-
 func (cd *CustomerData)GenerateTokenAndSave(c *biz.Customer, d time.Duration,secret string) (string,error) {
 	claims:=jwt.RegisteredClaims{
 		Issuer:    "LaoMaDJ",

@@ -23,3 +23,6 @@ func (s *CustomerService) Logout(ctx context.Context, req *pb.LogoutReq) (*pb.Lo
 func (s *CustomerService) Login(ctx context.Context, req *pb.LoginReq) (*pb.LoginResp, error) {
 	return &pb.LoginResp{}, nil
 }
+func (s *CustomerService) EstimatePrice(ctx context.Context, req *pb.EstimatePriceReq) (*pb.EstimatePriceResp, error) {
+	return &pb.EstimatePriceResp{}, nil
+}
