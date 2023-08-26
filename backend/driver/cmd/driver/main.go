@@ -2,7 +2,7 @@ package main
 
 import (
 	"flag"
-	consul "github.com/go-kratos/kratos/contrib/registry/consul/v2"
+	"github.com/go-kratos/kratos/contrib/registry/consul/v2"
 	"github.com/google/uuid"
 	"github.com/hashicorp/consul/api"
 	"go.opentelemetry.io/otel"
@@ -11,10 +11,9 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	traceSDK "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
-
 	"os"
 
-	"valuation/internal/conf"
+	"driver/internal/conf"
 
 	"github.com/go-kratos/kratos/v2"
 	"github.com/go-kratos/kratos/v2/config"
@@ -30,7 +29,7 @@ import (
 // go build -ldflags "-X main.Version=x.y.z"
 var (
 	// Name is the name of the compiled software.
-	Name = "valuation"
+	Name = "Driver"
 	// Version is the version of the compiled software.
 	Version = "1.0.0"
 	// flagconf is the config flag.
@@ -43,20 +42,16 @@ func init() {
 	flag.StringVar(&flagconf, "conf", "../../configs", "config path, eg: -conf config.yaml")
 }
 
-func newApp(logger log.Logger, gs *grpc.Server, hs *http.Server) *kratos.App {
-
-	consulConfig:=api.DefaultConfig()
-	consulConfig.Address="localhost:8500"
-	client, err := api.NewClient(consulConfig)
-	if err != nil {
+func newApp(cs *conf.Service, logger log.Logger, gs *grpc.Server, hs *http.Server) *kratos.App {
+	log.Info(cs.Consul.Addr)
+	reg,err:=initConsul(cs.Consul.Addr)
+	log.Info("----------------")
+	if err!=nil{
 		panic(err)
 	}
-	// new reg with consul client
-	reg := consul.New(client)
-
-	tpURL:="http://localhost:14268/api/traces"
-	if err:=initTrace(tpURL);err!=nil{
-		log.Error(err)
+	err=initTrace(cs.Jaeger.Url)
+	if err!=nil{
+		panic(err)
 	}
 	return kratos.New(
 		kratos.ID(id),
@@ -99,7 +94,7 @@ func main() {
 		panic(err)
 	}
 
-	app, cleanup, err := wireApp(bc.Server, bc.Data, logger)
+	app, cleanup, err := wireApp(bc.Service,bc.Server, bc.Data, logger)
 	if err != nil {
 		panic(err)
 	}
@@ -112,6 +107,18 @@ func main() {
 }
 
 
+func initConsul(addr string) (*consul.Registry ,error){
+	consulConfig:=api.DefaultConfig()
+	consulConfig.Address= addr
+	client, err := api.NewClient(consulConfig)
+	if err != nil {
+		return nil,err
+	}
+	// new reg with consul client
+	reg := consul.New(client)
+	return reg,nil
+}
+
 func initTrace(url string)error	  {
 	exporter, err := jaeger.New(jaeger.WithCollectorEndpoint(jaeger.WithEndpoint(url)))
 	if err!=nil{
@@ -123,8 +130,8 @@ func initTrace(url string)error	  {
 		traceSDK.WithResource(resource.NewSchemaless(
 			semconv.ServiceNameKey.String(Name),
 			attribute.String("exporter","jaeger"),
-			)),
-			)
+		)),
+	)
 	otel.SetTracerProvider(traceProvider)
 	return  nil
 }

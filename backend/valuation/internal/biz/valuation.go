@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/go-kratos/kratos/contrib/registry/consul/v2"
 	"github.com/go-kratos/kratos/v2/log"
+	"github.com/go-kratos/kratos/v2/middleware/tracing"
 
 	"github.com/go-kratos/kratos/v2/selector"
 	"github.com/go-kratos/kratos/v2/selector/wrr"
@@ -78,6 +79,9 @@ func (*ValuationBiz)GetDrivingInfo(ctx context.Context,origin,destination string
 		context.Background(),
 		grpc.WithEndpoint(endPoint),
 		grpc.WithDiscovery(dis),
+		grpc.WithMiddleware(
+				tracing.Client(),
+			),
 	)
 	if err!=nil{
 		return "", "", err
